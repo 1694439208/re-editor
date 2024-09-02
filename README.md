@@ -3,16 +3,69 @@
 
 # 由于和原作者编码风格冲突，所以不得已而开分支，此分支优化了大量的bug，增加了一部分api，增加了稳定性
 
+> 支持了鼠标悬浮提示
 
+> 修改了中文匹配，智能提示支持中文模糊匹配，大小写模糊匹配
 
+> 修复了频繁创建销毁组件导致的崩溃
 
+> 优化了频繁刷新组件，导致的超卡顿，修复了线程池渲染高亮导致的崩溃
 
+> 增加了 *QueryElementAtMousePosition* 检测鼠标坐标处是否有文本内容
 
+> 优化了光标的使用逻辑，操作光标时，必定是第一帧显示
 
+> 逻辑代码优化等等
+``` dart
+CodeAutocomplete(
+      key: GlobalKey(),
+      Lsp: true,//如果不想使用这些悬浮提示和 代码智能提示列表 可以将此属性改为false
+      HoverViewBuilder: (BuildContext context, CodeLineSelection selection) async {
+        //selection 是悬停在哪个文本的偏移 可以自定义返回内容
+        return "悬浮文本";
+      },
+      viewBuilder: (context, notifier, onSelected) async {
+        // 创建代码提示View 代码提示支持 自定义内容  支持了异步 
+        var data = notifier.value.selection;
+        var contentResult = await widget.client.sendhandleCompletion(widget.data.node.path.toFileUrl().toString(), data.baseIndex, data.baseOffset);
 
+        var Autolist = (contentResult["items"] as List<dynamic>).map((a) {
+          var m = a as Map<String, dynamic>;
+          return CodeFieldPrompt(word: m["label"].toString(), type: "");
+        });
+        if (!triggerCharacters.contains(notifier.value.input)) {
+          Autolist = Autolist.where((prompt) => prompt.match(notifier.value.input, caseInsensitive: true));
+        }
+        notifier.value.prompts.addAll(Autolist);
+        return _DefaultCodeAutocompleteListView(
+          notifier: notifier,
+          onSelected: onSelected,
+        );
+      },
+      child: Container(
+        child: CodeEditor(
+          shortcutOverrideActions: <Type, Action<Intent>>{
+            CodeShortcutSaveIntent: CallbackAction<CodeShortcutSaveIntent>(
+              onInvoke: (CodeShortcutSaveIntent intent) {
+                print("ctrl + x save");
+                return null;
+              },
+            ),
+            CodeShortcutRunIntent: CallbackAction<CodeShortcutRunIntent>(
+              onInvoke: (CodeShortcutRunIntent intent) async {
+                print("f5 run");
+                //增加了f5 回调
+                return null;
+              },
+            ),
+          },
+        ),
+      ),
+    );
+```
+# 以下是上面的效果
 
-
-
+<video src="https://github.com/user-attachments/assets/4495534d-75bf-46a1-90ab-d6525c1c954a" controls></video>
 
 
 
